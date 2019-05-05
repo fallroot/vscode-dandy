@@ -1,0 +1,24 @@
+{
+  "activationEvents": [
+    "onCommand:extension.dandy.run"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "category": "DANDY",
+        "command": "extension.dandy.run",
+        "title": "맞춤법 검사하기"
+      }
+    ]
+  },
+  "engines": {
+    "vscode": "^1.33.1"
+  },
+  "main": "extension.js",
+  "name": "dandy-vscode",
+  "publisher": "fallroot",
+  "version": "0.1.0",
+  "devDependencies": {
+    "standard": "^12.0.1"
+  }
+}
