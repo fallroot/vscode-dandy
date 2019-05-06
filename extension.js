@@ -74,9 +74,9 @@ function parseErrors (data) {
   })
 }
 
-function fix (document, diagnostic) {
+function fix ({ document, message, range }) {
   let edit = new vscode.WorkspaceEdit()
-  edit.replace(document.uri, diagnostic.range, diagnostic.message)
+  edit.replace(document.uri, range, message)
   vscode.workspace.applyEdit(edit)
 }
 
@@ -90,8 +90,6 @@ function setCollections (source, errors) {
     if (index < 0) {
       return
     }
-
-    console.log(error.before, index)
 
     const range = indexToRange(index, error.before)
     const diagnostic = new vscode.Diagnostic(range, error.after, vscode.DiagnosticSeverity.Error)
@@ -115,17 +113,26 @@ function provideCodeActions (document, range, context, token) {
   const codeActions = []
 
   context.diagnostics.forEach(diagnostic => {
-    const codeAction = new vscode.CodeAction(diagnostic.message, vscode.CodeActionKind.QuickFix)
-    codeAction.command = {
-      arguments: [document, diagnostic],
-      // title: 'Info Title',
-      command: 'extension.dandy.fix'
-    }
-    // infoAction.diagnostics = [diagnostic]
-    codeActions.push(codeAction)
+    const messages = diagnostic.message.split(/\s*\|\s*/).filter(s => s.length > 0)
+
+    messages.forEach(message => {
+      codeActions.push(generateCodeAction({ document, message, range }))
+    })
   })
 
   return codeActions
+}
+
+function generateCodeAction ({ document, message, range }) {
+  const codeAction = new vscode.CodeAction(message, vscode.CodeActionKind.QuickFix)
+
+  codeAction.command = {
+    arguments: [{ document, message, range }],
+    title: 'CodeAction\'s Title',
+    command: 'extension.dandy.fix'
+  }
+  // infoAction.diagnostics = [diagnostic]
+  return codeAction
 }
 
 module.exports = {
