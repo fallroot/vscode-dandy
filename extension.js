@@ -30,10 +30,17 @@ function run () {
   const selection = editor.selection
   const text = editor.document.getText(selection.isEmpty ? undefined : selection)
 
-  requestCheck(text)
+  vscode.window.withProgress({
+    location: vscode.ProgressLocation.Notification,
+    title: 'Processing...'
+  }, () => {
+    return new Promise(resolve => {
+      requestCheck(text, resolve)
+    })
+  })
 }
 
-function requestCheck (text) {
+function requestCheck (text, resolve) {
   const options = {
     uri: 'http://speller.cs.pusan.ac.kr/results',
     method: 'POST',
@@ -48,6 +55,7 @@ function requestCheck (text) {
       parseResponse(body)
       setCollections(text, errors)
     }
+    resolve()
   })
 }
 
