@@ -32,7 +32,7 @@ function run () {
 
   vscode.window.withProgress({
     location: vscode.ProgressLocation.Notification,
-    title: 'Processing...'
+    title: '맞춤법 검사를 진행하고 있습니다.'
   }, () => {
     return new Promise(resolve => {
       requestCheck(text, resolve)
@@ -124,7 +124,7 @@ function provideCodeActions (document, range, context, token) {
     const messages = diagnostic.message.split(/\s*\|\s*/).filter(s => s.length > 0)
 
     messages.forEach(message => {
-      codeActions.push(generateCodeAction({ document, message, range }))
+      codeActions.push(generateCodeAction({ document, message, range: diagnostic.range }))
     })
   })
 
@@ -139,7 +139,7 @@ function generateCodeAction ({ document, message, range }) {
     title: 'CodeAction\'s Title',
     command: 'extension.dandy.fix'
   }
-  // infoAction.diagnostics = [diagnostic]
+
   return codeAction
 }
 
