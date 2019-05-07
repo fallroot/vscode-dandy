@@ -7,7 +7,7 @@ let errors = []
 function activate (context) {
   const subs = context.subscriptions
 
-  subs.push(vscode.commands.registerCommand('extension.dandy.run', run))
+  subs.push(vscode.commands.registerTextEditorCommand('extension.dandy.run', run))
   subs.push(vscode.commands.registerCommand('extension.dandy.fix', fix))
   subs.push(
     vscode.languages.registerCodeActionsProvider('plaintext', {
