@@ -49,13 +49,14 @@ function requestCheck (text, resolve) {
     }
   }
   request.post(options, (error, httpResponse, body) => {
+    resolve()
+
     if (error) {
-      console.error(error)
+      vscode.window.showErrorMessage('맞춤법 검사기 서버에 접속할 수 없습니다.')
     } else {
       parseResponse(body)
       setCollections(text, errors)
     }
-    resolve()
   })
 }
 
