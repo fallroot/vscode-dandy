@@ -78,7 +78,7 @@ function parseErrors (data) {
     return {
       after: item.candWord,
       before: item.orgStr,
-      help: item.help
+      help: item.help.replace(/<br\/?>/gi, '\n')
     }
   })
 }
@@ -101,8 +101,9 @@ function setCollections (source, errors) {
     }
 
     const range = indexToRange(index, error.before)
-    const diagnostic = new vscode.Diagnostic(range, error.after, vscode.DiagnosticSeverity.Error)
+    const diagnostic = new vscode.Diagnostic(range, error.help, vscode.DiagnosticSeverity.Error)
 
+    diagnostic.answer = error.after
     diagnostics.push(diagnostic)
     fromIndex = index
   })
@@ -122,7 +123,7 @@ function provideCodeActions (document, range, context, token) {
   const codeActions = []
 
   context.diagnostics.forEach(diagnostic => {
-    const messages = diagnostic.message.split(/\s*\|\s*/).filter(s => s.length > 0)
+    const messages = diagnostic.answer.split(/\s*\|\s*/).filter(s => s.length > 0)
 
     messages.forEach(message => {
       codeActions.push(generateCodeAction({ document, message, range: diagnostic.range }))
