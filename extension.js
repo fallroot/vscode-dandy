@@ -77,7 +77,7 @@ function parseResponse (text) {
 function parseErrors (data) {
   return data.map(item => {
     return {
-      after: item.candWord,
+      after: item.candWord.split(/\s*\|\s*/).filter(s => s.length > 0),
       before: item.orgStr,
       help: item.help.replace(/<br\/?>/gi, '\n')
     }
@@ -92,14 +92,36 @@ function fix ({ document, message, range }) {
 
 function fixAll () {
   const uri = vscode.window.activeTextEditor.document.uri
-  const diagnostics = diagnosticCollection.get(uri)
+  const diagnostics = removeIntersections(diagnosticCollection.get(uri))
   const edit = new vscode.WorkspaceEdit()
 
-  diagnostics.forEach(diagnostic => {
-    edit.replace(uri, diagnostic.range, diagnostic.answer)
-  })
+  diagnostics.forEach(diagnostic => edit.replace(uri, diagnostic.range, diagnostic.answers[0]))
 
-  vscode.workspace.applyEdit(edit)
+  vscode.workspace.applyEdit(edit).then(() => diagnosticCollection.clear()).catch(console.error)
+}
+
+function removeIntersections (diagnostics) {
+  const result = []
+
+  for (let i = 0, length = diagnostics.length; i < length; ++i) {
+    let a = diagnostics[i]
+    let intersected = false
+
+    for (let j = i + 1; j < length; ++j) {
+      let b = diagnostics[j]
+
+      if (a.range.intersection(b.range)) {
+        intersected = true
+        break
+      }
+    }
+
+    if (!intersected) {
+      result.push(a)
+    }
+  }
+
+  return result
 }
 
 function setCollections (source, errors) {
@@ -116,7 +138,7 @@ function setCollections (source, errors) {
     const range = indexToRange(index, error.before)
     const diagnostic = new vscode.Diagnostic(range, error.help, vscode.DiagnosticSeverity.Error)
 
-    diagnostic.answer = error.after
+    diagnostic.answers = error.after
     diagnostics.push(diagnostic)
     fromIndex = index
   })
@@ -136,9 +158,7 @@ function provideCodeActions (document, range, context, token) {
   const codeActions = []
 
   context.diagnostics.forEach(diagnostic => {
-    const messages = diagnostic.answer.split(/\s*\|\s*/).filter(s => s.length > 0)
-
-    messages.forEach(message => {
+    diagnostic.answers.forEach(message => {
       codeActions.push(generateCodeAction({ document, message, range: diagnostic.range }))
     })
   })
