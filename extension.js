@@ -10,11 +10,7 @@ function activate (context) {
   subs.push(vscode.commands.registerTextEditorCommand('extension.dandy.run', run))
   subs.push(vscode.commands.registerCommand('extension.dandy.fix', fix))
   subs.push(vscode.commands.registerCommand('extension.dandy.fixAll', fixAll))
-  subs.push(
-    vscode.languages.registerCodeActionsProvider('plaintext', {
-      provideCodeActions
-    })
-  )
+  subs.push(vscode.languages.registerCodeActionsProvider('plaintext', { provideCodeActions }))
   subs.push(diagnosticCollection)
   subs.push(vscode.workspace.onDidChangeTextDocument(e => {
     setCollections(e.document.getText(), errors)
@@ -94,36 +90,11 @@ function fix ({ document, message, range }) {
 
 function fixAll () {
   const uri = vscode.window.activeTextEditor.document.uri
-  const diagnostics = removeIntersections(diagnosticCollection.get(uri))
+  const diagnostics = diagnosticCollection.get(uri)
   const edit = new vscode.WorkspaceEdit()
 
   diagnostics.forEach(diagnostic => edit.replace(uri, diagnostic.range, diagnostic.answers[0]))
-
   vscode.workspace.applyEdit(edit).then(() => diagnosticCollection.clear()).catch(console.error)
-}
-
-function removeIntersections (diagnostics) {
-  const result = []
-
-  for (let i = 0, length = diagnostics.length; i < length; ++i) {
-    let a = diagnostics[i]
-    let intersected = false
-
-    for (let j = i + 1; j < length; ++j) {
-      let b = diagnostics[j]
-
-      if (a.range.intersection(b.range)) {
-        intersected = true
-        break
-      }
-    }
-
-    if (!intersected) {
-      result.push(a)
-    }
-  }
-
-  return result
 }
 
 function setCollections (source, errors) {
@@ -139,36 +110,6 @@ function setCollections (source, errors) {
   })
 
   diagnosticCollection.set(vscode.window.activeTextEditor.document.uri, diagnostics)
-}
-
-// function setCollections (source, errors) {
-//   const diagnostics = []
-//   let fromIndex
-
-//   errors.forEach(error => {
-//     const index = source.indexOf(error.before, fromIndex)
-
-//     if (index < 0) {
-//       return
-//     }
-
-//     const range = indexToRange(index, error.before)
-//     const diagnostic = new vscode.Diagnostic(range, error.help, vscode.DiagnosticSeverity.Error)
-
-//     diagnostic.answers = error.after
-//     diagnostics.push(diagnostic)
-//     fromIndex = index
-//   })
-
-//   diagnosticCollection.set(vscode.window.activeTextEditor.document.uri, diagnostics)
-// }
-
-function indexToRange (index, keyword) {
-  const document = vscode.window.activeTextEditor.document
-  const start = document.positionAt(index)
-  const end = start.translate(0, keyword.length)
-
-  return new vscode.Range(start, end)
 }
 
 function provideCodeActions (document, range, context, token) {
