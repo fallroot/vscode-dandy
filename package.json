@@ -8,6 +8,11 @@
         "category": "DANDY",
         "command": "extension.dandy.run",
         "title": "맞춤법 검사하기"
+      },
+      {
+        "category": "DANDY",
+        "command": "extension.dandy.fixAll",
+        "title": "모두 고치기"
       }
     ]
   },

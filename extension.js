@@ -9,6 +9,7 @@ function activate (context) {
 
   subs.push(vscode.commands.registerTextEditorCommand('extension.dandy.run', run))
   subs.push(vscode.commands.registerCommand('extension.dandy.fix', fix))
+  subs.push(vscode.commands.registerCommand('extension.dandy.fixAll', fixAll))
   subs.push(
     vscode.languages.registerCodeActionsProvider('plaintext', {
       provideCodeActions
@@ -86,6 +87,18 @@ function parseErrors (data) {
 function fix ({ document, message, range }) {
   let edit = new vscode.WorkspaceEdit()
   edit.replace(document.uri, range, message)
+  vscode.workspace.applyEdit(edit)
+}
+
+function fixAll () {
+  const uri = vscode.window.activeTextEditor.document.uri
+  const diagnostics = diagnosticCollection.get(uri)
+  const edit = new vscode.WorkspaceEdit()
+
+  diagnostics.forEach(diagnostic => {
+    edit.replace(uri, diagnostic.range, diagnostic.answer)
+  })
+
   vscode.workspace.applyEdit(edit)
 }
 
