@@ -79,7 +79,9 @@ function parseErrors (data) {
     return {
       after: item.candWord.split(/\s*\|\s*/).filter(s => s.length > 0),
       before: item.orgStr,
-      help: item.help.replace(/<br\/?>/gi, '\n')
+      end: item.end,
+      help: item.help.replace(/<br\/?>/gi, '\n'),
+      start: item.start
     }
   })
 }
@@ -125,26 +127,41 @@ function removeIntersections (diagnostics) {
 }
 
 function setCollections (source, errors) {
+  const document = vscode.window.activeTextEditor.document
   const diagnostics = []
-  let fromIndex
 
   errors.forEach(error => {
-    const index = source.indexOf(error.before, fromIndex)
-
-    if (index < 0) {
-      return
-    }
-
-    const range = indexToRange(index, error.before)
+    const range = new vscode.Range(document.positionAt(error.start), document.positionAt(error.end))
     const diagnostic = new vscode.Diagnostic(range, error.help, vscode.DiagnosticSeverity.Error)
 
     diagnostic.answers = error.after
     diagnostics.push(diagnostic)
-    fromIndex = index
   })
 
   diagnosticCollection.set(vscode.window.activeTextEditor.document.uri, diagnostics)
 }
+
+// function setCollections (source, errors) {
+//   const diagnostics = []
+//   let fromIndex
+
+//   errors.forEach(error => {
+//     const index = source.indexOf(error.before, fromIndex)
+
+//     if (index < 0) {
+//       return
+//     }
+
+//     const range = indexToRange(index, error.before)
+//     const diagnostic = new vscode.Diagnostic(range, error.help, vscode.DiagnosticSeverity.Error)
+
+//     diagnostic.answers = error.after
+//     diagnostics.push(diagnostic)
+//     fromIndex = index
+//   })
+
+//   diagnosticCollection.set(vscode.window.activeTextEditor.document.uri, diagnostics)
+// }
 
 function indexToRange (index, keyword) {
   const document = vscode.window.activeTextEditor.document
