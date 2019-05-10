@@ -21,9 +21,7 @@ function activate (context) {
 function run () {
   const editor = getEditor()
 
-  if (!editor) {
-    return
-  }
+  if (!editor) return
 
   const selection = editor.selection
   const text = editor.document.getText(selection.isEmpty ? undefined : selection)
@@ -62,9 +60,7 @@ function parseResponse (text) {
   const startIndex = text.indexOf('data = [{')
   const nextIndex = text.indexOf('pages = data.length;')
 
-  if (startIndex < 0 || nextIndex < 0) {
-    return
-  }
+  if (startIndex < 0 || nextIndex < 0) return
 
   const data = JSON.parse(text.substring(startIndex + 8, nextIndex - 4))
 
@@ -103,9 +99,7 @@ function skip (diagnostic) {
   let diagnostics = diagnosticCollection.get(uri).slice()
   const index = diagnostics.indexOf(diagnostic)
 
-  if (index < 0) {
-    return
-  }
+  if (index < 0) return
 
   errors.splice(errors.indexOf(diagnostic.error), 1)
   diagnostics.splice(index, 1)
