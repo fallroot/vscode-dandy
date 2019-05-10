@@ -19,7 +19,7 @@ function activate (context) {
 }
 
 function run () {
-  const editor = vscode.window.activeTextEditor
+  const editor = getEditor()
 
   if (!editor) {
     return
@@ -90,7 +90,7 @@ function fix ({ document, message, range }) {
 }
 
 function fixAll () {
-  const uri = vscode.window.activeTextEditor.document.uri
+  const uri = getDocument().uri
   const diagnostics = diagnosticCollection.get(uri)
   const edit = new vscode.WorkspaceEdit()
 
@@ -99,7 +99,7 @@ function fixAll () {
 }
 
 function skip (diagnostic) {
-  const uri = vscode.window.activeTextEditor.document.uri
+  const uri = getDocument().uri
   let diagnostics = diagnosticCollection.get(uri).slice()
   const index = diagnostics.indexOf(diagnostic)
 
@@ -113,7 +113,7 @@ function skip (diagnostic) {
 }
 
 function setCollections (source, errors) {
-  const document = vscode.window.activeTextEditor.document
+  const document = getDocument()
   const diagnostics = []
 
   errors.forEach(error => {
@@ -161,6 +161,18 @@ function generateSkipCodeAction ({ document, diagnostic }) {
   }
 
   return codeAction
+}
+
+function getDocument () {
+  const editor = getEditor()
+
+  if (!editor) return
+
+  return editor.document
+}
+
+function getEditor () {
+  return vscode.window.activeTextEditor
 }
 
 module.exports = {
