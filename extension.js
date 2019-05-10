@@ -10,7 +10,7 @@ function activate (context) {
   subs.push(vscode.commands.registerTextEditorCommand('extension.dandy.run', run))
   subs.push(vscode.commands.registerCommand('extension.dandy.fix', fix))
   subs.push(vscode.commands.registerCommand('extension.dandy.fixAll', fixAll))
-  subs.push(vscode.commands.registerCommand('extension.dandy.ignore', ignore))
+  subs.push(vscode.commands.registerCommand('extension.dandy.skip', skip))
   subs.push(vscode.languages.registerCodeActionsProvider('plaintext', { provideCodeActions }))
   subs.push(diagnosticCollection)
   subs.push(vscode.workspace.onDidChangeTextDocument(e => {
@@ -98,7 +98,7 @@ function fixAll () {
   vscode.workspace.applyEdit(edit).then(() => diagnosticCollection.clear()).catch(console.error)
 }
 
-function ignore (diagnostic) {
+function skip (diagnostic) {
   const uri = vscode.window.activeTextEditor.document.uri
   let diagnostics = diagnosticCollection.get(uri).slice()
   const index = diagnostics.indexOf(diagnostic)
@@ -107,16 +107,12 @@ function ignore (diagnostic) {
     return
   }
 
-  console.log(errors)
   errors.splice(errors.indexOf(diagnostic.error), 1)
-  console.log(errors)
-
   diagnostics.splice(index, 1)
   diagnosticCollection.set(uri, diagnostics)
 }
 
 function setCollections (source, errors) {
-  console.log('setCollections', errors)
   const document = vscode.window.activeTextEditor.document
   const diagnostics = []
 
@@ -129,17 +125,17 @@ function setCollections (source, errors) {
     diagnostics.push(diagnostic)
   })
 
-  diagnosticCollection.set(vscode.window.activeTextEditor.document.uri, diagnostics)
+  diagnosticCollection.set(document.uri, diagnostics)
 }
 
 function provideCodeActions (document, range, context, token) {
   const codeActions = []
 
   context.diagnostics.forEach(diagnostic => {
-    codeActions.push(generateIgnoreCodeAction({ document, diagnostic }))
     diagnostic.answers.forEach(message => {
       codeActions.push(generateCodeAction({ document, message, range: diagnostic.range }))
     })
+    codeActions.push(generateSkipCodeAction({ document, diagnostic }))
   })
 
   return codeActions
@@ -150,19 +146,18 @@ function generateCodeAction ({ document, message, range }) {
 
   codeAction.command = {
     arguments: [{ document, message, range }],
-    title: 'CodeAction\'s Title',
     command: 'extension.dandy.fix'
   }
 
   return codeAction
 }
 
-function generateIgnoreCodeAction ({ document, diagnostic }) {
+function generateSkipCodeAction ({ document, diagnostic }) {
   const codeAction = new vscode.CodeAction('건너뛰기', vscode.CodeActionKind.QuickFix)
 
   codeAction.command = {
     arguments: [diagnostic],
-    command: 'extension.dandy.ignore'
+    command: 'extension.dandy.skip'
   }
 
   return codeAction
