@@ -3,6 +3,7 @@ const request = require('request')
 
 const diagnosticCollection = vscode.languages.createDiagnosticCollection('dandy')
 let errors = []
+let startOffset = 0
 
 function activate (context) {
   const subs = context.subscriptions
@@ -25,6 +26,8 @@ function run () {
 
   const selection = editor.selection
   const text = editor.document.getText(selection.isEmpty ? undefined : selection)
+
+  startOffset = selection.isEmpty ? 0 : editor.document.offsetAt(selection.start)
 
   vscode.window.withProgress({
     location: vscode.ProgressLocation.Notification,
@@ -111,7 +114,9 @@ function setCollections (source, errors) {
   const diagnostics = []
 
   errors.forEach(error => {
-    const range = new vscode.Range(document.positionAt(error.start), document.positionAt(error.end))
+    const start = document.positionAt(error.start + startOffset)
+    const end = document.positionAt(error.end + startOffset)
+    const range = new vscode.Range(start, end)
     const diagnostic = new vscode.Diagnostic(range, error.help, vscode.DiagnosticSeverity.Error)
 
     diagnostic.answers = error.after
