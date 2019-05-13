@@ -3,7 +3,6 @@ const request = require('request')
 
 const diagnosticCollection = vscode.languages.createDiagnosticCollection('dandy')
 let errors = []
-let startOffset = 0
 
 function activate (context) {
   const subs = context.subscriptions
@@ -25,9 +24,8 @@ function run () {
   if (!editor) return
 
   const selection = editor.selection
-  const text = editor.document.getText(selection.isEmpty ? undefined : selection)
-
-  startOffset = selection.isEmpty ? 0 : editor.document.offsetAt(selection.start)
+  const empty = selection.isEmpty
+  const text = editor.document.getText(empty ? undefined : selection)
 
   vscode.window.withProgress({
     location: vscode.ProgressLocation.Notification,
@@ -37,6 +35,30 @@ function run () {
       requestCheck(text, resolve)
     })
   })
+}
+
+function getTextInfo () {
+  const editor = getEditor()
+  const document = editor.document
+  const selection = editor.selection
+  const empty = selection.isEmpty
+  const text = document.getText(empty ? undefined : selection)
+  const result = {
+    document,
+    editor,
+    selection,
+    text
+  }
+
+  if (empty) {
+    result.end = 0
+    result.start = 0
+  } else {
+    result.end = document.offsetAt(selection.end)
+    result.start = document.offsetAt(selection.start)
+  }
+
+  return result
 }
 
 function requestCheck (text, resolve) {
@@ -71,15 +93,23 @@ function parseResponse (text) {
 }
 
 function parseErrors (data) {
-  return data.map(item => {
-    return {
+  const keywords = []
+  const result = []
+
+  data.forEach(item => {
+    const keyword = item.orgStr
+
+    if (keywords.includes(keyword)) return
+
+    keywords.push(keyword)
+    result.push({
       after: item.candWord.split(/\s*\|\s*/).filter(s => s.length > 0),
-      before: item.orgStr,
-      end: item.end,
-      help: item.help.replace(/<br\/?>/gi, '\n'),
-      start: item.start
-    }
+      before: keyword,
+      help: item.help.replace(/<br\/?>/gi, '\n')
+    })
   })
+
+  return result
 }
 
 function fix ({ document, message, range }) {
@@ -110,18 +140,26 @@ function skip (diagnostic) {
 }
 
 function setCollections (source, errors) {
+  const info = getTextInfo()
   const document = getDocument()
   const diagnostics = []
 
   errors.forEach(error => {
-    const start = document.positionAt(error.start + startOffset)
-    const end = document.positionAt(error.end + startOffset)
-    const range = new vscode.Range(start, end)
-    const diagnostic = new vscode.Diagnostic(range, error.help, vscode.DiagnosticSeverity.Error)
+    const keyword = error.before
+    let index = info.text.indexOf(keyword)
 
-    diagnostic.answers = error.after
-    diagnostic.error = error
-    diagnostics.push(diagnostic)
+    while (index >= 0) {
+      const start = document.positionAt(index)
+      const end = document.positionAt(index + keyword.length)
+      const range = new vscode.Range(start, end)
+      const diagnostic = new vscode.Diagnostic(range, error.help, vscode.DiagnosticSeverity.Error)
+
+      diagnostic.answers = error.after
+      diagnostic.error = error
+      diagnostics.push(diagnostic)
+
+      index = info.text.indexOf(keyword, index + 1)
+    }
   })
 
   diagnosticCollection.set(document.uri, diagnostics)
