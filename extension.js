@@ -12,10 +12,8 @@ function activate (context) {
   subs.push(vscode.commands.registerCommand('dandy.fixAll', fixAll))
   subs.push(vscode.commands.registerCommand('dandy.skip', skip))
   subs.push(vscode.languages.registerCodeActionsProvider('plaintext', { provideCodeActions }))
+  subs.push(vscode.workspace.onDidChangeTextDocument(onDidChangeTextDocument))
   subs.push(diagnosticCollection)
-  subs.push(vscode.workspace.onDidChangeTextDocument(e => {
-    setCollections(e.document.getText(), errors)
-  }))
 }
 
 function run () {
@@ -210,6 +208,12 @@ function getDocument () {
 
 function getEditor () {
   return vscode.window.activeTextEditor
+}
+
+function onDidChangeTextDocument (event) {
+  if (errors.length > 0) {
+    setCollections(event.document.getText(), errors)
+  }
 }
 
 module.exports = {
