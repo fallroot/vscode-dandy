@@ -1,17 +1,17 @@
 {
   "activationEvents": [
-    "onCommand:extension.dandy.run"
+    "onCommand:dandy.run"
   ],
   "contributes": {
     "commands": [
       {
         "category": "DANDY",
-        "command": "extension.dandy.run",
+        "command": "dandy.run",
         "title": "맞춤법 검사하기"
       },
       {
         "category": "DANDY",
-        "command": "extension.dandy.fixAll",
+        "command": "dandy.fixAll",
         "title": "모두 고치기"
       }
     ]

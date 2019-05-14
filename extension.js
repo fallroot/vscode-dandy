@@ -7,10 +7,10 @@ let errors = []
 function activate (context) {
   const subs = context.subscriptions
 
-  subs.push(vscode.commands.registerTextEditorCommand('extension.dandy.run', run))
-  subs.push(vscode.commands.registerCommand('extension.dandy.fix', fix))
-  subs.push(vscode.commands.registerCommand('extension.dandy.fixAll', fixAll))
-  subs.push(vscode.commands.registerCommand('extension.dandy.skip', skip))
+  subs.push(vscode.commands.registerTextEditorCommand('dandy.run', run))
+  subs.push(vscode.commands.registerCommand('dandy.fix', fix))
+  subs.push(vscode.commands.registerCommand('dandy.fixAll', fixAll))
+  subs.push(vscode.commands.registerCommand('dandy.skip', skip))
   subs.push(vscode.languages.registerCodeActionsProvider('plaintext', { provideCodeActions }))
   subs.push(diagnosticCollection)
   subs.push(vscode.workspace.onDidChangeTextDocument(e => {
@@ -183,7 +183,7 @@ function generateCodeAction ({ document, message, range }) {
 
   codeAction.command = {
     arguments: [{ document, message, range }],
-    command: 'extension.dandy.fix'
+    command: 'dandy.fix'
   }
 
   return codeAction
@@ -194,7 +194,7 @@ function generateSkipCodeAction ({ document, diagnostic }) {
 
   codeAction.command = {
     arguments: [diagnostic],
-    command: 'extension.dandy.skip'
+    command: 'dandy.skip'
   }
 
   return codeAction
