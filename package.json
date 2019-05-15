@@ -23,6 +23,10 @@
   "main": "src/extension.js",
   "name": "dandy-for-vscode",
   "publisher": "fallroot",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fallroot/dandy-for-vscode"
+  },
   "version": "0.1.0",
   "devDependencies": {
     "standard": "^12.0.1"
