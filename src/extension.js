@@ -1,4 +1,5 @@
 const vscode = require('vscode')
+const codeActionProvider = require('./code-action-provider')
 const spellChecker = require('./spell-checker')
 
 const diagnosticCollection = vscode.languages.createDiagnosticCollection('dandy')
@@ -11,7 +12,7 @@ function activate (context) {
   subs.push(vscode.commands.registerCommand('dandy.fix', fix))
   subs.push(vscode.commands.registerCommand('dandy.fixAll', fixAll))
   subs.push(vscode.commands.registerCommand('dandy.skip', skip))
-  subs.push(vscode.languages.registerCodeActionsProvider('plaintext', { provideCodeActions }))
+  subs.push(vscode.languages.registerCodeActionsProvider('plaintext', codeActionProvider))
   subs.push(vscode.workspace.onDidChangeTextDocument(onDidChangeTextDocument))
   subs.push(diagnosticCollection)
 }
@@ -111,41 +112,6 @@ function setCollections (source) {
   })
 
   diagnosticCollection.set(document.uri, diagnostics)
-}
-
-function provideCodeActions (document, range, context, token) {
-  const codeActions = []
-
-  context.diagnostics.forEach(diagnostic => {
-    diagnostic.answers.forEach(message => {
-      codeActions.push(generateCodeAction({ document, message, range: diagnostic.range }))
-    })
-    codeActions.push(generateSkipCodeAction({ document, diagnostic }))
-  })
-
-  return codeActions
-}
-
-function generateCodeAction ({ document, message, range }) {
-  const codeAction = new vscode.CodeAction(message, vscode.CodeActionKind.QuickFix)
-
-  codeAction.command = {
-    arguments: [{ document, message, range }],
-    command: 'dandy.fix'
-  }
-
-  return codeAction
-}
-
-function generateSkipCodeAction ({ document, diagnostic }) {
-  const codeAction = new vscode.CodeAction('건너뛰기', vscode.CodeActionKind.QuickFix)
-
-  codeAction.command = {
-    arguments: [diagnostic],
-    command: 'dandy.skip'
-  }
-
-  return codeAction
 }
 
 function getDocument () {
