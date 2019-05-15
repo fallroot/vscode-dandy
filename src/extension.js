@@ -1,5 +1,5 @@
 const vscode = require('vscode')
-const request = require('request')
+const spellChecker = require('./spell-checker')
 
 const diagnosticCollection = vscode.languages.createDiagnosticCollection('dandy')
 let errors = []
@@ -29,9 +29,9 @@ function run () {
     location: vscode.ProgressLocation.Notification,
     title: '맞춤법 검사를 진행하고 있습니다.'
   }, () => {
-    return requestCheck(text).then(body => {
-      parseResponse(body)
-      setCollections(text, errors)
+    return spellChecker.execute(text).then(result => {
+      errors = result.errors
+      setCollections(result.text)
     })
   })
 }
@@ -56,57 +56,6 @@ function getTextInfo () {
     result.end = document.offsetAt(selection.end)
     result.start = document.offsetAt(selection.start)
   }
-
-  return result
-}
-
-function requestCheck (text) {
-  return new Promise((resolve, reject) => {
-    const options = {
-      uri: 'http://speller.cs.pusan.ac.kr/results',
-      method: 'POST',
-      form: {
-        text1: text
-      }
-    }
-
-    request.post(options, (error, response, body) => {
-      if (error) {
-        reject(error)
-      } else {
-        resolve(body)
-      }
-    })
-  })
-}
-
-function parseResponse (text) {
-  const startIndex = text.indexOf('data = [{')
-  const nextIndex = text.indexOf('pages = data.length;')
-
-  if (startIndex < 0 || nextIndex < 0) return
-
-  const data = JSON.parse(text.substring(startIndex + 8, nextIndex - 4))
-
-  errors = parseErrors(data.errInfo)
-}
-
-function parseErrors (data) {
-  const keywords = []
-  const result = []
-
-  data.forEach(item => {
-    const keyword = item.orgStr
-
-    if (keywords.includes(keyword)) return
-
-    keywords.push(keyword)
-    result.push({
-      after: item.candWord.split(/\s*\|\s*/).filter(s => s.length > 0),
-      before: keyword,
-      help: item.help.replace(/<br\/?>/gi, '\n')
-    })
-  })
 
   return result
 }
@@ -138,7 +87,7 @@ function skip (diagnostic) {
   diagnosticCollection.set(uri, diagnostics)
 }
 
-function setCollections (source, errors) {
+function setCollections (source) {
   const info = getTextInfo()
   const document = getDocument()
   const diagnostics = []
