@@ -20,7 +20,7 @@
     "vscode": "^1.33.1"
   },
   "main": "src/extension.js",
-  "name": "dandy-vscode",
+  "name": "dandy-for-vscode",
   "publisher": "fallroot",
   "version": "0.1.0",
   "devDependencies": {
