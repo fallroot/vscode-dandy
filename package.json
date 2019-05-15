@@ -19,6 +19,7 @@
   "engines": {
     "vscode": "^1.33.1"
   },
+  "icon": "img/icon.png",
   "main": "src/extension.js",
   "name": "dandy-for-vscode",
   "publisher": "fallroot",
