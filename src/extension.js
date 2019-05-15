@@ -29,8 +29,9 @@ function run () {
     location: vscode.ProgressLocation.Notification,
     title: '맞춤법 검사를 진행하고 있습니다.'
   }, () => {
-    return new Promise(resolve => {
-      requestCheck(text, resolve)
+    return requestCheck(text).then(body => {
+      parseResponse(body)
+      setCollections(text, errors)
     })
   })
 }
@@ -59,23 +60,23 @@ function getTextInfo () {
   return result
 }
 
-function requestCheck (text, resolve) {
-  const options = {
-    uri: 'http://speller.cs.pusan.ac.kr/results',
-    method: 'POST',
-    form: {
-      text1: text
+function requestCheck (text) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      uri: 'http://speller.cs.pusan.ac.kr/results',
+      method: 'POST',
+      form: {
+        text1: text
+      }
     }
-  }
-  request.post(options, (error, httpResponse, body) => {
-    resolve()
 
-    if (error) {
-      vscode.window.showErrorMessage('맞춤법 검사기 서버에 접속할 수 없습니다.')
-    } else {
-      parseResponse(body)
-      setCollections(text, errors)
-    }
+    request.post(options, (error, response, body) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve(body)
+      }
+    })
   })
 }
 
