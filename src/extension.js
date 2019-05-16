@@ -2,7 +2,7 @@ const vscode = require('vscode')
 const codeActionProvider = require('./code-action-provider')
 const spellChecker = require('./spell-checker')
 
-const diagnosticCollection = vscode.languages.createDiagnosticCollection('dandy')
+const collection = vscode.languages.createDiagnosticCollection('dandy')
 let errors = []
 
 function activate (context) {
@@ -14,7 +14,7 @@ function activate (context) {
   subs.push(vscode.commands.registerCommand('dandy.skip', skip))
   subs.push(vscode.languages.registerCodeActionsProvider('plaintext', codeActionProvider))
   subs.push(vscode.workspace.onDidChangeTextDocument(onDidChangeTextDocument))
-  subs.push(diagnosticCollection)
+  subs.push(collection)
 }
 
 function run () {
@@ -22,9 +22,10 @@ function run () {
 
   if (!editor) return
 
+  const document = editor.document
   const selection = editor.selection
   const empty = selection.isEmpty
-  const text = editor.document.getText(empty ? undefined : selection)
+  const text = document.getText(empty ? undefined : selection)
 
   vscode.window.withProgress({
     location: vscode.ProgressLocation.Notification,
@@ -32,33 +33,9 @@ function run () {
   }, () => {
     return spellChecker.execute(text).then(result => {
       errors = result.errors
-      setCollections(result.text)
+      setCollections(document)
     })
   })
-}
-
-function getTextInfo () {
-  const editor = getEditor()
-  const document = editor.document
-  const selection = editor.selection
-  const empty = selection.isEmpty
-  const text = document.getText(empty ? undefined : selection)
-  const result = {
-    document,
-    editor,
-    selection,
-    text
-  }
-
-  if (empty) {
-    result.end = 0
-    result.start = 0
-  } else {
-    result.end = document.offsetAt(selection.end)
-    result.start = document.offsetAt(selection.start)
-  }
-
-  return result
 }
 
 function fix ({ document, message, range }) {
@@ -69,33 +46,32 @@ function fix ({ document, message, range }) {
 
 function fixAll () {
   const uri = getDocument().uri
-  const diagnostics = diagnosticCollection.get(uri)
+  const diagnostics = collection.get(uri)
   const edit = new vscode.WorkspaceEdit()
 
   diagnostics.forEach(diagnostic => edit.replace(uri, diagnostic.range, diagnostic.answers[0]))
-  vscode.workspace.applyEdit(edit).then(() => diagnosticCollection.clear()).catch(console.error)
+  vscode.workspace.applyEdit(edit).then(() => collection.clear()).catch(console.error)
 }
 
 function skip (diagnostic) {
   const uri = getDocument().uri
-  let diagnostics = diagnosticCollection.get(uri).slice()
+  let diagnostics = collection.get(uri).slice()
   const index = diagnostics.indexOf(diagnostic)
 
   if (index < 0) return
 
   errors.splice(errors.indexOf(diagnostic.error), 1)
   diagnostics.splice(index, 1)
-  diagnosticCollection.set(uri, diagnostics)
+  collection.set(uri, diagnostics)
 }
 
-function setCollections (source) {
-  const info = getTextInfo()
-  const document = getDocument()
+function setCollections (document) {
+  const text = document.getText()
   const diagnostics = []
 
   errors.forEach(error => {
     const keyword = error.before
-    let index = info.text.indexOf(keyword)
+    let index = text.indexOf(keyword)
 
     while (index >= 0) {
       const start = document.positionAt(index)
@@ -107,11 +83,11 @@ function setCollections (source) {
       diagnostic.error = error
       diagnostics.push(diagnostic)
 
-      index = info.text.indexOf(keyword, index + 1)
+      index = text.indexOf(keyword, index + 1)
     }
   })
 
-  diagnosticCollection.set(document.uri, diagnostics)
+  collection.set(document.uri, diagnostics)
 }
 
 function getDocument () {
@@ -128,7 +104,7 @@ function getEditor () {
 
 function onDidChangeTextDocument (event) {
   if (errors.length > 0) {
-    setCollections(event.document.getText(), errors)
+    setCollections(event.document)
   }
 }
 
