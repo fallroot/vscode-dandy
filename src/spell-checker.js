@@ -14,10 +14,11 @@ function execute (text) {
       if (error) {
         reject(error)
       } else {
-        resolve({
-          errors: parse(body),
-          text
-        })
+        try {
+          resolve({ errors: parse(body), text })
+        } catch (e) {
+          reject(e)
+        }
       }
     })
   })
@@ -27,27 +28,30 @@ function parse (text) {
   const startIndex = text.indexOf('data = [{')
   const nextIndex = text.indexOf('pages = data.length;')
 
-  if (startIndex < 0 || nextIndex < 0) return
+  if (startIndex < 0 || nextIndex < 0) throw Error('failedToFindJson')
 
-  const data = JSON.parse(text.substring(startIndex + 8, nextIndex - 4))
+  const rawData = text.substring(startIndex + 7, nextIndex - 3)
+  const data = JSON.parse(`{"pages":${rawData}}`)
 
-  return build(data.errInfo)
+  return build(data.pages)
 }
 
-function build (data) {
+function build (pages) {
   const keywords = []
   const result = []
 
-  data.forEach(item => {
-    const keyword = item.orgStr
+  pages.forEach(page => {
+    page.errInfo.forEach(error => {
+      const keyword = error.orgStr
 
-    if (keywords.includes(keyword)) return
+      if (keywords.includes(keyword)) return
 
-    keywords.push(keyword)
-    result.push({
-      after: item.candWord.split(/\s*\|\s*/).filter(s => s.length > 0),
-      before: keyword,
-      help: unescapeHtmlEntity(item.help.replace(/<br\/?>/gi, '\n'))
+      keywords.push(keyword)
+      result.push({
+        after: error.candWord.split(/\s*\|\s*/).filter(s => s.length > 0),
+        before: keyword,
+        help: unescapeHtmlEntity(error.help.replace(/<br\/?>/gi, '\n'))
+      })
     })
   })
 
