@@ -3,7 +3,7 @@ const codeActionProvider = require('./code-action-provider')
 const spellChecker = require('./spell-checker')
 
 const collection = vscode.languages.createDiagnosticCollection('dandy')
-let errors = []
+const resultMap = new WeakMap()
 
 function activate (context) {
   const subs = context.subscriptions
@@ -32,7 +32,7 @@ function run () {
     title: '맞춤법 검사를 진행하고 있습니다.'
   }, () => {
     return spellChecker.execute(text).then(result => {
-      errors = result.errors
+      resultMap.set(document, result.errors)
       setCollections(document)
     })
   })
@@ -45,7 +45,8 @@ function fix ({ document, message, range }) {
 }
 
 function fixAll () {
-  const uri = getDocument().uri
+  const document = getDocument()
+  const uri = document.uri
   const diagnostics = collection.get(uri)
   const edit = new vscode.WorkspaceEdit()
 
@@ -54,20 +55,27 @@ function fixAll () {
 }
 
 function skip (diagnostic) {
-  const uri = getDocument().uri
+  const document = getDocument()
+  const uri = document.uri
   let diagnostics = collection.get(uri).slice()
   const index = diagnostics.indexOf(diagnostic)
 
   if (index < 0) return
 
-  errors.splice(errors.indexOf(diagnostic.error), 1)
+  const errors = resultMap.get(document)
+
+  resultMap.set(document, errors.splice(errors.indexOf(diagnostic.error), 1))
   diagnostics.splice(index, 1)
   collection.set(uri, diagnostics)
 }
 
-function setCollections (document) {
+function setCollections (document, errors) {
   const text = document.getText()
   const diagnostics = []
+
+  if (errors === undefined) {
+    errors = resultMap.get(document)
+  }
 
   errors.forEach(error => {
     const keyword = error.before
@@ -80,6 +88,7 @@ function setCollections (document) {
       const diagnostic = new vscode.Diagnostic(range, error.help, vscode.DiagnosticSeverity.Error)
 
       diagnostic.answers = error.after
+      diagnostic.document = document
       diagnostic.error = error
       diagnostics.push(diagnostic)
 
@@ -103,8 +112,11 @@ function getEditor () {
 }
 
 function onDidChangeTextDocument (event) {
-  if (errors.length > 0) {
-    setCollections(event.document)
+  const document = event.document
+  const errors = resultMap.get(document)
+
+  if (errors && errors.length > 0) {
+    setCollections(document, errors)
   }
 }
 
