@@ -47,11 +47,16 @@ function build (data) {
     result.push({
       after: item.candWord.split(/\s*\|\s*/).filter(s => s.length > 0),
       before: keyword,
-      help: item.help.replace(/<br\/?>/gi, '\n')
+      help: unescapeHtmlEntity(item.help.replace(/<br\/?>/gi, '\n'))
     })
   })
 
   return result
+}
+
+// 맞춤법 검사기의 출력 결과에 따라 HTML 엔티티를 추가할 수 있다.
+function unescapeHtmlEntity (text) {
+  return text.replace(/&apos;/g, '\'')
 }
 
 module.exports = {
