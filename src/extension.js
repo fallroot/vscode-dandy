@@ -12,7 +12,7 @@ function activate (context) {
   subs.push(vscode.commands.registerCommand('dandy.fix', fix))
   subs.push(vscode.commands.registerCommand('dandy.fixAll', fixAll))
   subs.push(vscode.commands.registerCommand('dandy.skip', skip))
-  subs.push(vscode.languages.registerCodeActionsProvider('plaintext', codeActionProvider))
+  subs.push(vscode.languages.registerCodeActionsProvider(['markdown', 'plaintext'], codeActionProvider))
   subs.push(vscode.workspace.onDidChangeTextDocument(onDidChangeTextDocument))
   subs.push(collection)
 }
