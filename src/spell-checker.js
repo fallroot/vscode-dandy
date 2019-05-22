@@ -60,7 +60,11 @@ function build (pages) {
 
 // 맞춤법 검사기의 출력 결과에 따라 HTML 엔티티를 추가할 수 있다.
 function unescapeHtmlEntity (text) {
-  return text.replace(/&apos;/g, '\'')
+  return text.replace(/&amp;/g, '&')
+    .replace(/&apos;/g, '\'')
+    .replace(/&gt;/g, '>')
+    .replace(/&lt;/g, '<')
+    .replace(/&quot;/g, '"')
 }
 
 module.exports = {
