@@ -2,6 +2,7 @@
   "activationEvents": [
     "onCommand:dandy.run"
   ],
+  "categories": ["Linters", "Other"],
   "contributes": {
     "commands": [
       {
@@ -16,23 +17,24 @@
       }
     ]
   },
+  "dependencies": {
+    "request": "^2.88.0"
+  },
+  "devDependencies": {
+    "standard": "^12.0.1"
+  },
   "displayName": "단디 - 한국어 맞춤법 검사기",
   "engines": {
     "vscode": "^1.33.1"
   },
   "icon": "img/icon.png",
+  "keywords": ["hangul", "korean", "spelling"],
   "main": "src/extension.js",
-  "name": "dandy-for-vscode",
+  "name": "vscode-dandy",
   "publisher": "fallroot",
   "repository": {
     "type": "git",
-    "url": "https://github.com/fallroot/dandy-for-vscode"
+    "url": "https://github.com/fallroot/vscode-dandy"
   },
-  "version": "0.1.0",
-  "devDependencies": {
-    "standard": "^12.0.1"
-  },
-  "dependencies": {
-    "request": "^2.88.0"
-  }
+  "version": "0.1.0"
 }
