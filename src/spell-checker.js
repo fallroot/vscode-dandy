@@ -26,14 +26,14 @@ function execute (text) {
 
 function parse (text) {
   // index of first opening bracket
-  const startIndex = text.indexOf('data = [{') + 7
+  const startIndex = text.indexOf('data = [{')
   // index of semicolon after last closing bracket
-  const nextIndex = text.indexOf('}];\n') + 2
+  const nextIndex = text.indexOf('}];\n')
 
   if (startIndex < 0 || nextIndex < 0) throw Error('failedToFindJson')
 
   // JSON data except trailing semicolon
-  const rawData = text.substring(startIndex, nextIndex)
+  const rawData = text.substring(startIndex + 7, nextIndex + 2)
   const data = JSON.parse(`{"pages":${rawData}}`)
 
   return build(data.pages)
