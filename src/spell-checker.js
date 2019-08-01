@@ -26,7 +26,7 @@ function execute (text) {
 
 function parse (text) {
   const startIndex = text.indexOf('data = [{')
-  const nextIndex = text.indexOf('pages = data.length;')
+  const nextIndex = text.indexOf('pageIdx =')
 
   if (startIndex < 0 || nextIndex < 0) throw Error('failedToFindJson')
 
