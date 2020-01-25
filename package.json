@@ -2,7 +2,10 @@
   "activationEvents": [
     "onCommand:dandy.run"
   ],
-  "categories": ["Linters", "Other"],
+  "categories": [
+    "Linters",
+    "Other"
+  ],
   "contributes": {
     "commands": [
       {
@@ -28,7 +31,11 @@
     "vscode": "^1.33.1"
   },
   "icon": "img/icon.png",
-  "keywords": ["hangul", "korean", "spelling"],
+  "keywords": [
+    "hangul",
+    "korean",
+    "spelling"
+  ],
   "main": "src/extension.js",
   "name": "vscode-dandy",
   "publisher": "fallroot",

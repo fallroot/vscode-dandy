@@ -17,26 +17,72 @@ function activate (context) {
   subs.push(collection)
 }
 
-function run () {
-  const editor = getEditor()
+function run() {
+  try {
+    const editor = getEditor()
 
-  if (!editor) return
+    if (!editor) return
 
-  const document = editor.document
-  const selection = editor.selection
-  const empty = selection.isEmpty
-  const text = document.getText(empty ? undefined : selection)
+    const document = editor.document;
+    const selection = editor.selection;
+    const empty = selection.isEmpty;
+    // 맞춤법 서버로 전송한 텍스트가 Windows 포맷, 즉 CR LF로 줄바꿈되어 있더라도
+    // 결과의 오프셋 값은 CR 만의 줄바꿈 기준으로 되어 있다. 이 때문에 오차가 생기는 
+    // 것을 방지하기 위해 LF를 공백으로 대체하여 보냄
+    const text = document.getText(empty ? undefined : selection).replace(/\n/g, ' ');
 
-  vscode.window.withProgress({
-    location: vscode.ProgressLocation.Notification,
-    title: '맞춤법 검사를 진행하고 있습니다.'
-  }, () => {
-    return spellChecker.execute(text).then(result => {
-      resultMap.set(document, result.errors)
-      setCollections(document)
-    })
-  })
+    vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: '맞춤법 검사를 진행하고 있습니다.'
+      },
+      async () =>  {
+        // console.log("맞춤법 검사 (전체 " + text.length + " 글자)");
+        const texts = splitter(text, 8000);
+        const errors = [];
+        var splitStart  = 0;
+        for(const t of texts) {
+          // console.log("맞춤법 검사 (" + t.length + " 글자), errors=" + errors);
+          const result = await spellChecker.execute(t);
+          // console.log("맞춤법 결과 error=" + result.errors.length + " 개");
+          for(error of result.errors) {
+              error.start += splitStart; // +adjOffset(error.start, t);
+              error.end += splitStart; // +adjOffset(error.end, t);
+              errors.push(error);
+              console.log("adding error " + error.before);
+          }
+          splitStart += t.length;
+        }
+        console.log("총 에러 = " + errors.length);
+        resultMap.set(document, errors);
+        setCollections(document)
+      }
+    );
+  } catch (error) {
+    // for debugging
+    console.error("Error in run(): " + error.stack);
+  }
 }
+
+// limit 길이 한도 내에서 문장 단위로 split
+function splitter(str, limit) {
+  const sentences = str.match( /[^\.!\?]+[\.!\?]+/g );
+  const splits = [];
+  var partial = "";
+  sentences.forEach(s=> {
+      if (partial.length+s.length>limit) {
+          splits.push(partial);
+          partial=s;
+      } else {
+          partial+=s;
+      }
+  });
+  if (partial.length>1)
+      splits.push(partial);
+  return splits;
+}
+
+
 
 function fix ({ document, message, range }) {
   let edit = new vscode.WorkspaceEdit()
@@ -77,24 +123,17 @@ function setCollections (document, errors) {
     errors = resultMap.get(document)
   }
 
-  errors.forEach(error => {
+  for (error of errors) {
     const keyword = error.before
-    let index = text.indexOf(keyword)
-
-    while (index >= 0) {
-      const start = document.positionAt(index)
-      const end = document.positionAt(index + keyword.length)
-      const range = new vscode.Range(start, end)
+      const range = new vscode.Range(
+        document.positionAt(error.start), 
+        document.positionAt(error.end));
       const diagnostic = new vscode.Diagnostic(range, error.help, vscode.DiagnosticSeverity.Error)
-
       diagnostic.answers = error.after
       diagnostic.document = document
       diagnostic.error = error
       diagnostics.push(diagnostic)
-
-      index = text.indexOf(keyword, index + 1)
-    }
-  })
+  }
 
   collection.set(document.uri, diagnostics)
 }

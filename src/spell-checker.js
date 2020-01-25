@@ -46,13 +46,12 @@ function build (pages) {
   pages.forEach(page => {
     page.errInfo.forEach(error => {
       const keyword = error.orgStr
-
-      if (keywords.includes(keyword)) return
-
       keywords.push(keyword)
       result.push({
         after: error.candWord.split(/\s*\|\s*/).filter(s => s.length > 0),
         before: keyword,
+        start: error.start,
+        end: error.end,
         help: unescapeHtmlEntity(error.help.replace(/<br\/?>/gi, '\n'))
       })
     })
