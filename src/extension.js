@@ -18,7 +18,7 @@ function activate (context) {
 }
 
 function run() {
-  try {
+
     const editor = getEditor()
 
     if (!editor) return
@@ -51,13 +51,9 @@ function run() {
           splitStart += t.length;
         }
         resultMap.set(document, errors);
-        setCollections(document)
+        setCollections(document);
       }
     );
-  } catch (error) {
-    // for debugging
-    console.error("Error in run(): " + error.stack);
-  }
 }
 
 // limit 길이 한도 내에서 문장 단위로 split
