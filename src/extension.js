@@ -42,18 +42,14 @@ function run() {
         const errors = [];
         var splitStart  = 0;
         for(const t of texts) {
-          // console.log("맞춤법 검사 (" + t.length + " 글자), errors=" + errors);
           const result = await spellChecker.execute(t);
-          // console.log("맞춤법 결과 error=" + result.errors.length + " 개");
           for(error of result.errors) {
               error.start += splitStart; // +adjOffset(error.start, t);
               error.end += splitStart; // +adjOffset(error.end, t);
               errors.push(error);
-              console.log("adding error " + error.before);
           }
           splitStart += t.length;
         }
-        console.log("총 에러 = " + errors.length);
         resultMap.set(document, errors);
         setCollections(document)
       }
