@@ -30,6 +30,7 @@ function run() {
     // 결과의 오프셋 값은 CR 만의 줄바꿈 기준으로 되어 있다. 이 때문에 오차가 생기는 
     // 것을 방지하기 위해 LF를 공백으로 대체하여 보냄
     const text = document.getText(empty ? undefined : selection).replace(/\n/g, ' ');
+    const startOffset = empty? 0 : document.offsetAt(selection.start);
 
     vscode.window.withProgress(
       {
@@ -37,15 +38,14 @@ function run() {
         title: '맞춤법 검사를 진행하고 있습니다.'
       },
       async () =>  {
-        // console.log("맞춤법 검사 (전체 " + text.length + " 글자)");
         const texts = splitter(text, 8000);
         const errors = [];
-        var splitStart  = 0;
+        var splitStart  = startOffset;
         for(const t of texts) {
           const result = await spellChecker.execute(t);
           for(error of result.errors) {
-              error.start += splitStart; // +adjOffset(error.start, t);
-              error.end += splitStart; // +adjOffset(error.end, t);
+              error.start += splitStart;
+              error.end += splitStart;
               errors.push(error);
           }
           splitStart += t.length;
