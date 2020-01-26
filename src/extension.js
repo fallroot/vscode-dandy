@@ -2,8 +2,9 @@ const vscode = require('vscode')
 const codeActionProvider = require('./code-action-provider')
 const spellChecker = require('./spell-checker')
 
+// collection is a per-extension Map<document.uri, diagnostics[]>
 const collection = vscode.languages.createDiagnosticCollection('dandy')
-const resultMap = new WeakMap()
+// const resultMap = new WeakMap()
 
 function activate (context) {
   const subs = context.subscriptions
@@ -14,11 +15,13 @@ function activate (context) {
   subs.push(vscode.commands.registerCommand('dandy.skip', skip))
   subs.push(vscode.languages.registerCodeActionsProvider(['markdown', 'plaintext'], codeActionProvider))
   subs.push(vscode.workspace.onDidChangeTextDocument(onDidChangeTextDocument))
+  subs.push(vscode.workspace.onDidCloseTextDocument(onDidCloseTextDocument))
+  subs.push(vscode.workspace.onDidSaveTextDocument(onDidSaveTextDocument))
   subs.push(collection)
 }
 
 function run() {
-
+try {
     const editor = getEditor()
 
     if (!editor) return
@@ -50,10 +53,13 @@ function run() {
           }
           splitStart += t.length;
         }
-        resultMap.set(document, errors);
-        setCollections(document);
+        // resultMap.set(document.fileName, errors);
+        setCollections(document, errors);
       }
     );
+} catch(error) {
+  console.log(error.stack);
+}
 }
 
 // limit 길이 한도 내에서 문장 단위로 split
@@ -93,16 +99,10 @@ function fixAll () {
 }
 
 function skip (diagnostic) {
-  const document = getDocument()
-  const uri = document.uri
-  let diagnostics = collection.get(uri).slice()
+  const uri = getDocument().uri;
+  const diagnostics = collection.get(uri).slice()
   const index = diagnostics.indexOf(diagnostic)
-
   if (index < 0) return
-
-  const errors = resultMap.get(document)
-
-  resultMap.set(document, errors.splice(errors.indexOf(diagnostic.error), 1))
   diagnostics.splice(index, 1)
   collection.set(uri, diagnostics)
 }
@@ -110,10 +110,6 @@ function skip (diagnostic) {
 function setCollections (document, errors) {
   const text = document.getText()
   const diagnostics = []
-
-  if (errors === undefined) {
-    errors = resultMap.get(document)
-  }
 
   for (error of errors) {
     const keyword = error.before
@@ -124,6 +120,9 @@ function setCollections (document, errors) {
       diagnostic.answers = error.after
       diagnostic.document = document
       diagnostic.error = error
+      // 문서가 편집된 후에 offset 값을 알아내기 어려우므로 추가 field에 저장해둔다.
+      diagnostic.startOffset = error.start;
+      diagnostic.endOffset = error.end;
       diagnostics.push(diagnostic)
   }
 
@@ -143,11 +142,46 @@ function getEditor () {
 }
 
 function onDidChangeTextDocument (event) {
-  const document = event.document
-  const errors = resultMap.get(document)
+  const changes = event.contentChanges;
+  if (!changes || changes.length==0) 
+    return;
+  for(const changed of changes) {
+    const offsetInc = changed.text.length - changed.rangeLength;
+    if (offsetInc==0)
+      return; // don't need to anything
+      
+    const diags = collection.get(event.document.uri);
+    const newDiags = []
+    const document = event.document;
+    for(d of diags) {
+      if (d.range.end.isBefore(changed.range.start))
+        newDiags.push(d);
+      else if (d.range.start.isAfter(changed.range.end)) { 
+        // d.range는 편집 전의 document를 기준으로 좌표를 가지고 있기 때문에
+        // 지금 시점에서 document.offsetAt으로 offset을 계산할 수 없음. 때문에 별도로 저장해놓은 offset값을 이용
+        const start=document.positionAt(offsetInc+d.startOffset);
+        const end=document.positionAt(offsetInc+d.endOffset);
+        d.range = new vscode.Range(start, end);
+        d.startOffset += offsetInc;
+        d.endOffset += offsetInc;
+        newDiags.push(d);
+      } else {
+        // diag에 접하는 영역을 편집시에는 diag를 삭제해버리자.
+      }
+    }
+    collection.set(event.document.uri, newDiags);
+  }
+}
 
-  if (errors && errors.length > 0) {
-    setCollections(document, errors)
+function onDidCloseTextDocument(document) {
+  if (document && document.uri) {
+    collection.delete(document.uri);
+  }
+}
+
+function onDidSaveTextDocument(document) {
+  if (document && document.uri) {
+    collection.set(document.uri, []);
   }
 }
 
