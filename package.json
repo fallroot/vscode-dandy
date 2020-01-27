@@ -18,7 +18,20 @@
         "command": "dandy.fixAll",
         "title": "모두 고치기"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Dandy",
+      "properties": {
+        "dandy.exceptWords": {
+          "description": "맞춤법 검사 결과에서 제외할 어휘",
+          "scope": "resource",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
   },
   "dependencies": {
     "request": "^2.88.0"

@@ -13,6 +13,7 @@ function activate (context) {
   subs.push(vscode.commands.registerCommand('dandy.fix', fix))
   subs.push(vscode.commands.registerCommand('dandy.fixAll', fixAll))
   subs.push(vscode.commands.registerCommand('dandy.skip', skip))
+  subs.push(vscode.commands.registerCommand('dandy.addToException', addToException))
   subs.push(vscode.languages.registerCodeActionsProvider(['markdown', 'plaintext'], codeActionProvider))
   subs.push(vscode.workspace.onDidChangeTextDocument(onDidChangeTextDocument))
   subs.push(vscode.workspace.onDidCloseTextDocument(onDidCloseTextDocument))
@@ -107,14 +108,36 @@ function skip (diagnostic) {
   collection.set(uri, diagnostics)
 }
 
-function setCollections (document, errors) {
+async function addToException(word) {
+  // 예외처리할 word를 workspace별 dictionary에 저장
+  const config = vscode.workspace.getConfiguration("dandy")
+  let words = config.get('exceptWords');
+  if (!words) words = []
+  if (!words.includes(word)) {
+    words.push(word);
+    words.sort();
+  }
+  // Diagnostic에서 같은 단어 삭제
+  const doc = getDocument();
+  const diags = collection.get(doc.uri);
+  const newDiags = diags.filter(diag => doc.getText(diag.range)!=word);
+  collection.set(doc.uri, newDiags);
+  // workspace .vscode/settings.json에 저장
+  await config.update('exceptWords', words, vscode.ConfigurationTarget.workspace);
+}
+
+function setCollections(document, errors) {
   const text = document.getText()
   const diagnostics = []
+  const config = vscode.workspace.getConfiguration("dandy")
+  let exceptWords = config.get('exceptWords');
+  if (!exceptWords) exceptWords = []
 
   for (error of errors) {
-    const keyword = error.before
+    if (!exceptWords.includes(error.before)) { // 예외처리 단어 제외
+      const keyword = error.before
       const range = new vscode.Range(
-        document.positionAt(error.start), 
+        document.positionAt(error.start),
         document.positionAt(error.end));
       const diagnostic = new vscode.Diagnostic(range, error.help, vscode.DiagnosticSeverity.Error)
       diagnostic.answers = error.after
@@ -124,8 +147,8 @@ function setCollections (document, errors) {
       diagnostic.startOffset = error.start;
       diagnostic.endOffset = error.end;
       diagnostics.push(diagnostic)
+    }
   }
-
   collection.set(document.uri, diagnostics)
 }
 
@@ -154,9 +177,9 @@ function onDidChangeTextDocument (event) {
     const newDiags = []
     const document = event.document;
     for(d of diags) {
-      if (d.range.end.isBefore(changed.range.start))
+      if (d.range.end.isBeforeOrEqual(changed.range.start))
         newDiags.push(d);
-      else if (d.range.start.isAfter(changed.range.end)) { 
+      else if (d.range.start.isAfterOrEqual(changed.range.end)) { 
         // d.range는 편집 전의 document를 기준으로 좌표를 가지고 있기 때문에
         // 지금 시점에서 document.offsetAt으로 offset을 계산할 수 없음. 때문에 별도로 저장해놓은 offset값을 이용
         const start=document.positionAt(offsetInc+d.startOffset);
