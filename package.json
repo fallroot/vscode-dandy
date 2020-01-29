@@ -2,7 +2,10 @@
   "activationEvents": [
     "onCommand:dandy.run"
   ],
-  "categories": ["Linters", "Other"],
+  "categories": [
+    "Linters",
+    "Other"
+  ],
   "contributes": {
     "commands": [
       {
@@ -15,7 +18,20 @@
         "command": "dandy.fixAll",
         "title": "모두 고치기"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Dandy",
+      "properties": {
+        "dandy.exceptWords": {
+          "description": "맞춤법 검사 결과에서 제외할 어휘",
+          "scope": "resource",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
   },
   "dependencies": {
     "request": "^2.88.0"
@@ -28,7 +44,11 @@
     "vscode": "^1.33.1"
   },
   "icon": "img/icon.png",
-  "keywords": ["hangul", "korean", "spelling"],
+  "keywords": [
+    "hangul",
+    "korean",
+    "spelling"
+  ],
   "main": "src/extension.js",
   "name": "vscode-dandy",
   "publisher": "fallroot",

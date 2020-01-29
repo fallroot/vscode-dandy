@@ -5,33 +5,21 @@ function getProvider (document, range, context, token) {
 
   context.diagnostics.forEach(diagnostic => {
     diagnostic.answers.forEach(message => {
-      codeActions.push(generateForFix({ document, message, range: diagnostic.range }))
+      codeActions.push(makeQuickFixCommand('"'+message+'"', [{document, message, range: diagnostic.range}], "dandy.fix"))
     })
-    codeActions.push(generateForSkip({ document, diagnostic }))
+    codeActions.push(makeQuickFixCommand("건너뛰기",[diagnostic],"dandy.skip" ))
+    codeActions.push(makeQuickFixCommand("예외추가",[document.getText(range)],"dandy.addToException"))
   })
 
   return codeActions
 }
 
-function generateForFix ({ document, message, range }) {
-  const codeAction = new vscode.CodeAction(message, vscode.CodeActionKind.QuickFix)
-
+function makeQuickFixCommand(menuTitle, commandArgs, commandName) {
+  const codeAction = new vscode.CodeAction(menuTitle, vscode.CodeActionKind.QuickFix)
   codeAction.command = {
-    arguments: [{ document, message, range }],
-    command: 'dandy.fix'
+    arguments: commandArgs,
+    command: commandName
   }
-
-  return codeAction
-}
-
-function generateForSkip ({ document, diagnostic }) {
-  const codeAction = new vscode.CodeAction('건너뛰기', vscode.CodeActionKind.QuickFix)
-
-  codeAction.command = {
-    arguments: [diagnostic],
-    command: 'dandy.skip'
-  }
-
   return codeAction
 }
 
