@@ -11,7 +11,6 @@ function activate (context) {
 
   subs.push(vscode.commands.registerTextEditorCommand('dandy.run', run))
   subs.push(vscode.commands.registerCommand('dandy.fix', fix))
-  subs.push(vscode.commands.registerCommand('dandy.fixAll', fixAll))
   subs.push(vscode.commands.registerCommand('dandy.skip', skip))
   subs.push(vscode.commands.registerCommand('dandy.addToException', addToException))
   subs.push(vscode.languages.registerCodeActionsProvider(['markdown', 'plaintext'], codeActionProvider))
@@ -22,45 +21,52 @@ function activate (context) {
 }
 
 function run() {
-try {
-    const editor = getEditor()
 
-    if (!editor) return
+  const editor = getEditor()
 
-    const document = editor.document;
-    const selection = editor.selection;
-    const empty = selection.isEmpty;
-    // 맞춤법 서버로 전송한 텍스트가 Windows 포맷, 즉 CR LF로 줄바꿈되어 있더라도
-    // 결과의 오프셋 값은 CR 만의 줄바꿈 기준으로 되어 있다. 이 때문에 오차가 생기는 
-    // 것을 방지하기 위해 LF를 공백으로 대체하여 보냄
-    const text = document.getText(empty ? undefined : selection).replace(/\n/g, ' ');
-    const startOffset = empty? 0 : document.offsetAt(selection.start);
+  if (!editor) return
 
-    vscode.window.withProgress(
-      {
-        location: vscode.ProgressLocation.Notification,
-        title: '맞춤법 검사를 진행하고 있습니다.'
-      },
-      async () =>  {
+  const document = editor.document;
+  const selection = editor.selection;
+  const empty = selection.isEmpty;
+  // 맞춤법 서버로 전송한 텍스트가 Windows 포맷, 즉 CR LF로 줄바꿈되어 있더라도
+  // 결과의 오프셋 값은 CR 만의 줄바꿈 기준으로 되어 있다. 이 때문에 오차가 생기는 
+  // 것을 방지하기 위해 LF를 공백으로 대체하여 보냄
+  const text = document.getText(empty ? undefined : selection).replace(/\n/g, ' ');
+  const startOffset = empty ? 0 : document.offsetAt(selection.start);
+
+  vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: '맞춤법 검사를 진행하고 있습니다.'
+    },
+    async (progress) => {
+      return new Promise(async (resolve, reject) =>  {
+      try {
         const texts = splitter(text, 8000);
         const errors = [];
-        var splitStart  = startOffset;
-        for(const t of texts) {
+        var splitStart = startOffset;
+        for (const t of texts) {
+
           const result = await spellChecker.execute(t);
-          for(error of result.errors) {
-              error.start += splitStart;
-              error.end += splitStart;
-              errors.push(error);
+
+          for (error of result.errors) {
+            error.start += splitStart;
+            error.end += splitStart;
+            errors.push(error);
           }
           splitStart += t.length;
         }
-        // resultMap.set(document.fileName, errors);
         setCollections(document, errors);
+        resolve();
+      } catch (error) {
+        vscode.window.showInformationMessage(error);
+        reject(error);
       }
-    );
-} catch(error) {
-  console.log(error.stack);
-}
+    })
+    }
+  );
+
 }
 
 // limit 길이 한도 내에서 문장 단위로 split
@@ -81,22 +87,11 @@ function splitter(str, limit) {
   return splits;
 }
 
-
-
 function fix ({ document, message, range }) {
   let edit = new vscode.WorkspaceEdit()
   edit.replace(document.uri, range, message)
   vscode.workspace.applyEdit(edit)
-}
-
-function fixAll () {
-  const document = getDocument()
-  const uri = document.uri
-  const diagnostics = collection.get(uri)
-  const edit = new vscode.WorkspaceEdit()
-
-  diagnostics.forEach(diagnostic => edit.replace(uri, diagnostic.range, diagnostic.answers[0]))
-  vscode.workspace.applyEdit(edit).then(() => collection.clear()).catch(console.error)
+  // 해당 diagnostic은 onDidChangeTextDocument 에서 삭제됨
 }
 
 function skip (diagnostic) {
@@ -170,8 +165,6 @@ function onDidChangeTextDocument (event) {
     return;
   for(const changed of changes) {
     const offsetInc = changed.text.length - changed.rangeLength;
-    if (offsetInc==0)
-      return; // don't need to anything
       
     const diags = collection.get(event.document.uri);
     const newDiags = []
